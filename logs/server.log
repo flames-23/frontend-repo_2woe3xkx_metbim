@@ -1,0 +1,16 @@
+
+> vibe-generated-app@1.0.0 dev
+> vite
+
+
+  VITE v5.4.20  ready in 295 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://172.20.7.77:3000/
+[vite:css] @import must precede all other statements (besides @charset or empty @layer)
+26 |  
+27 |  /* Fonts */
+28 |  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+29 |  
+30 |  .font-orbitron { font-family: 'Orbitron', system-ui, sans-serif; }
