@@ -4,9 +4,60 @@ import Spline from '@splinetool/react-spline'
 const API_URL = 'https://agent-prod.studio.lyzr.ai/v3/inference/chat/'
 const API_KEY = 'sk-default-Yq5Cz1mhH2FcgDMbzAf2wvCbAR6mgHRF'
 
+function safeExtractMessage(payload) {
+  try {
+    if (!payload || typeof payload === 'string') return payload || ''
+    const tryPaths = [
+      // common flat fields
+      ['message'], ['reply'], ['content'], ['answer'], ['response'], ['output_text'], ['result'],
+      // nested under data
+      ['data','message'], ['data','reply'], ['data','content'], ['data','answer'], ['data','response'], ['data','output'], ['data','text'],
+      // openai-like
+      ['choices', 0, 'message', 'content'],
+      // general output arrays
+      ['output','text'], ['output',0,'content'], ['outputs',0,'content'], ['results',0,'content'],
+    ]
+    for (const path of tryPaths) {
+      let cur = payload
+      let ok = true
+      for (const key of path) {
+        if (cur && typeof cur === 'object' && key in cur) cur = cur[key]
+        else { ok = false; break }
+      }
+      if (ok && (typeof cur === 'string' && cur.trim())) return cur
+    }
+    // If still nothing, last resort stringify
+    return JSON.stringify(payload)
+  } catch (e) {
+    return ''
+  }
+}
+
+async function parseAIResponse(res) {
+  const ct = res.headers.get('content-type') || ''
+  if (ct.includes('application/json')) {
+    const json = await res.json().catch(async () => ({ raw: await res.text().catch(() => '') }))
+    return safeExtractMessage(json)
+  }
+  // handle text/event-stream or plain text responses
+  const text = await res.text().catch(() => '')
+  if (!text) return ''
+  // Try to pull last JSON object from possible SSE or multilines
+  const lines = text.split(/\n|\r/).map(l => l.trim()).filter(Boolean)
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].replace(/^data:\s*/, '')
+    try {
+      const j = JSON.parse(line)
+      const extracted = safeExtractMessage(j)
+      if (extracted) return extracted
+    } catch (_) { /* not json */ }
+  }
+  return text
+}
+
 function ChatModal({ open, onClose }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi, I'm the AI co‑pilot for this portfolio. Ask me about projects, skills, or experience." },
+    { role: 'assistant', content: "Hi, I'm the AI co‑pilot. Ask about Sumesh’s projects, skills, education, or experience." },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -44,14 +95,12 @@ function ChatModal({ open, onClose }) {
         }),
       })
 
-      let text = ''
-      try {
-        const data = await res.json()
-        text = data?.message || data?.reply || data?.content || data?.data || JSON.stringify(data)
-      } catch (e) {
-        text = await res.text()
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        throw new Error(`AI service error ${res.status}: ${errText || res.statusText}`)
       }
 
+      const text = await parseAIResponse(res)
       setMessages(prev => [...prev, { role: 'assistant', content: text || 'Thanks! Ask me more.' }])
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'There was an issue reaching the AI service. Please try again.' }])
@@ -83,7 +132,7 @@ function ChatModal({ open, onClose }) {
             <button onClick={onClose} className="ml-auto px-3 py-1 text-cyan-200/80 hover:text-cyan-100 hover:scale-105 transition-transform" aria-label="Close chat">✕</button>
           </header>
 
-          <div className="max-h-[55vh] sm:max-h-[60vh] overflow-y-auto p-5 sm:p-6 space-y-4 custom-scroll">
+          <div className="max-h:[60vh] sm:max-h-[65vh] overflow-y-auto p-5 sm:p-6 space-y-4 custom-scroll">
             {messages.map((m, i) => (
               <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                 <div className={(m.role === 'user'
@@ -132,14 +181,33 @@ function App() {
 
   const handleAskAI = () => setChatOpen(true)
 
-  const handleDownload = () => {
-    // Try to download a resume file from public; fallback to generating one
+  const handleDownload = async () => {
+    try {
+      const head = await fetch('/resume.pdf', { method: 'HEAD' })
+      if (head.ok) {
+        const link = document.createElement('a')
+        link.href = '/resume.pdf'
+        link.download = 'Sumesh_Singh_Kotiwale_Resume.pdf'
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        return
+      }
+    } catch (_) { /* fallthrough to generate */ }
+
+    // Fallback: generate a clean text resume from provided details
+    const resumeText = `Sumesh Singh Kotiwale\nHyderabad, Telangana, India | sumesh13055@gmail.com | +91 7288081868\n\nCareer Statement\nSeeking an opportunity to apply my strong programming and problem-solving abilities to real-world challenges. Aspire to contribute to projects that power digital transformation for clients in alignment with an AI-First vision, and to develop specialized skills in high-impact technology domains.\n\nEducation\n- M.C.A., Chaitanya Bharathi Institute of Technology, Hyderabad (2024–2026)\n  Semester I CGPA: 8.67/10 | Semester II CGPA: 8.37/10\n- B.C.A., University College of Science, Osmania University Saifabad, Hyderabad (2021–2024)\n  CGPA: 8.54/10\n- 12th, Tapasya Junior College, Hyderabad (2021) – 92.80% (TSBIE)\n- 10th, ST. Joseph’s High School, Hyderabad (2019) – CGPA 9/10 (BSET)\n\nProjects\n- TruePulse (Jun 2025)\n  AI-powered tool to assess credibility, tone, and topics of news articles/snippets. Paste text or links to get a summary and trust score.\n  Tech: React, Flask, Python, Tailwind CSS, Sentiment Analysis, Machine Learning | Team: 2\n- Lab Attendance System (Nov–Dec 2024)\n  Modern desktop app for managing student lab attendance. Features real-time tracking, validation, Excel export, and themed UI.\n  Tech: Python, customtkinter, pandas, Excel integration | Team: 1\n\nKey Expertise\n- Languages: Python, Java, C++\n- Frontend: HTML, CSS, JavaScript\n- Other: Generative AI, Graphic Designing\n\nCertifications & Achievements\n- Python Foundation – Infosys\n- GfG 160 (22-week) – GeeksForGeeks\n- Hackathons: HackPrix Season 2, HackHazard’25, COSC-CBIT\n- Pointers – Code Studio\n- Class representative (2 years)\n\nWorkshops\n- Cybersecurity Unlocked – CBIT (Nov 2024) | Topics: Cyber Attacks, SQL Injection, CSRF | Duration: 3 days\n`.
+      trim()
+
+    const blob = new Blob([resumeText], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = '/resume.pdf'
-    link.download = 'Resume.pdf'
+    link.href = url
+    link.download = 'Sumesh_Singh_Kotiwale_Resume.txt'
     document.body.appendChild(link)
     link.click()
     link.remove()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -152,18 +220,18 @@ function App() {
 
       <div className="absolute inset-0 opacity-[0.08] bg-[linear-gradient(0deg,transparent_24%,rgba(255,255,255,0.6)_25%,rgba(255,255,255,0.6)_26%,transparent_27%,transparent_74%,rgba(255,255,255,0.6)_75%,rgba(255,255,255,0.6)_76%,transparent_77%),linear-gradient(90deg,transparent_24%,rgba(255,255,255,0.6)_25%,rgba(255,255,255,0.6)_26%,transparent_27%,transparent_74%,rgba(255,255,255,0.6)_75%,rgba(255,255,255,0.6)_76%,transparent_77%)] bg-[length:50px_50px]" />
 
-      <section className="relative z-10 flex flex-col items-center justify-center text-center px-6 sm:px-10 pt-28 pb-24 sm:pt-36 sm:pb-32">
-        <div className="glass-panel neon-border px-6 sm:px-10 py-8 sm:py-12 rounded-3xl border border-white/10 backdrop-blur-xl bg-white/5 shadow-[0_0_120px_rgba(34,197,245,0.15)]">
+      <section className="relative z-10 flex flex-col items-center justify-center text-center px-6 sm:px-10 pt-28 pb-16 sm:pt-36 sm:pb-20">
+        <div className="glass-panel neon-border px-6 sm:px-10 py-8 sm:py-12 rounded-3xl border border-white/10 backdrop-blur-xl bg-white/5 shadow-[0_0_120px_rgba(34,197,245,0.15)] max-w-4xl">
           <p className="font-space text-cyan-300/80 text-xs sm:text-sm tracking-[0.35em] uppercase mb-4 flex items-center justify-center gap-2">
-            <span className="h-1 w-1 rounded-full bg-cyan-400 animate-ping" /> Building Futures in Code
+            <span className="h-1 w-1 rounded-full bg-cyan-400 animate-ping" /> Hyderabad, Telangana, India
           </p>
 
           <h1 className="font-orbitron text-3xl sm:text-5xl md:text-6xl leading-tight sm:leading-[1.1] tracking-tight drop-shadow-[0_0_30px_rgba(56,189,248,0.35)]">
-            Futuristic Interfaces, Human‑Centered Design
+            Sumesh Singh Kotiwale
           </h1>
 
-          <p className="mt-4 sm:mt-5 max-w-2xl text-cyan-100/80 text-sm sm:text-base">
-            I craft immersive, high‑performance experiences with motion, 3D and delightful details. Let the co‑pilot answer your questions—or grab my resume.
+          <p className="mt-4 sm:mt-5 max-w-2xl mx-auto text-cyan-100/80 text-sm sm:text-base">
+            Seeking an opportunity to apply strong programming and problem‑solving abilities to real‑world challenges. Passionate about AI‑first products and impactful technology.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
@@ -177,7 +245,82 @@ function App() {
             </button>
           </div>
 
-          <div className="mt-8 text-[0.8rem] text-cyan-200/60 font-mono animate-scanline">Press Enter to send in chat • Esc to close</div>
+          <div className="mt-6 text-[0.8rem] text-cyan-200/70 font-mono">sumesh13055@gmail.com • +91 7288081868</div>
+          <div className="mt-2 text-[0.8rem] text-cyan-200/60 font-mono animate-scanline">Press Enter to send in chat • Esc to close</div>
+        </div>
+      </section>
+
+      <section className="relative z-10 px-6 sm:px-10 pb-24">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+          <div className="glass-panel neon-border rounded-3xl p-6 border border-white/10">
+            <h3 className="font-orbitron text-xl text-cyan-300 mb-3">Education</h3>
+            <ul className="space-y-3 text-cyan-100/85 text-sm">
+              <li>
+                <div className="font-semibold">M.C.A. — Chaitanya Bharathi Institute of Technology (2024–2026)</div>
+                <div className="text-cyan-200/70">Semester I: 8.67/10 • Semester II: 8.37/10</div>
+              </li>
+              <li>
+                <div className="font-semibold">B.C.A. — University College of Science, OU Saifabad (2021–2024)</div>
+                <div className="text-cyan-200/70">CGPA: 8.54/10</div>
+              </li>
+              <li>
+                <div className="font-semibold">12th — Tapasya Junior College (2021)</div>
+                <div className="text-cyan-200/70">TSBIE: 92.80%</div>
+              </li>
+              <li>
+                <div className="font-semibold">10th — ST. Joseph’s High School (2019)</div>
+                <div className="text-cyan-200/70">BSET: CGPA 9/10</div>
+              </li>
+            </ul>
+          </div>
+
+          <div className="glass-panel neon-border rounded-3xl p-6 border border-white/10">
+            <h3 className="font-orbitron text-xl text-cyan-300 mb-3">Key Expertise</h3>
+            <ul className="grid grid-cols-2 gap-2 text-sm text-cyan-100/85">
+              <li>Python</li>
+              <li>Java</li>
+              <li>C++</li>
+              <li>HTML</li>
+              <li>CSS</li>
+              <li>JavaScript</li>
+              <li>Generative AI</li>
+              <li>Graphic Designing</li>
+            </ul>
+          </div>
+
+          <div className="glass-panel neon-border rounded-3xl p-6 border border-white/10 md:col-span-2">
+            <h3 className="font-orbitron text-xl text-cyan-300 mb-3">Projects</h3>
+            <div className="space-y-5 text-sm text-cyan-100/85">
+              <div>
+                <div className="font-semibold">TruePulse — AI‑powered news credibility tool <span className="text-cyan-200/70">(Jun 2025)</span></div>
+                <div>Assesses credibility, tone, and key topics from article text or links; provides summary and trust score.</div>
+                <div className="text-cyan-200/70">React, Flask, Python, Tailwind CSS, Sentiment Analysis, Machine Learning • Team: 2</div>
+              </div>
+              <div>
+                <div className="font-semibold">Lab Attendance System — Desktop app <span className="text-cyan-200/70">(Nov–Dec 2024)</span></div>
+                <div>Real‑time attendance tracking, data validation, Excel export, modern themed UI. AI‑assisted development for ideation and optimization.</div>
+                <div className="text-cyan-200/70">Python, customtkinter, pandas, Excel integration • Team: 1</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-panel neon-border rounded-3xl p-6 border border-white/10">
+            <h3 className="font-orbitron text-xl text-cyan-300 mb-3">Certifications & Achievements</h3>
+            <ul className="list-disc ml-5 space-y-2 text-sm text-cyan-100/85">
+              <li>Python Foundation — Infosys</li>
+              <li>GfG 160 — 22‑week problem solving, GeeksForGeeks</li>
+              <li>Hackathons: HackPrix S2, HackHazard’25, COSC‑CBIT</li>
+              <li>Pointers — Code Studio</li>
+              <li>Class representative for two years (UG)</li>
+            </ul>
+          </div>
+
+          <div className="glass-panel neon-border rounded-3xl p-6 border border-white/10">
+            <h3 className="font-orbitron text-xl text-cyan-300 mb-3">Workshops</h3>
+            <div className="text-sm text-cyan-100/85">
+              Cybersecurity Unlocked — CBIT (Nov 2024): Cyber attacks, SQL‑injections, CSRF • Duration: 3 days
+            </div>
+          </div>
         </div>
       </section>
 
