@@ -1,12 +1,13 @@
 
-> vibe-generated-app@1.0.0 dev
+> sumesh-portfolio-sci-fi@1.0.0 dev
 > vite
 
 
-  VITE v5.4.20  ready in 292 ms
+  VITE v5.4.20  ready in 305 ms
 
   ➜  Local:   http://localhost:3000/
-  ➜  Network: http://172.20.7.77:3000/
+  ➜  Network: http://172.20.24.101:3000/
+7:01:30 PM [vite] Pre-transform error: Failed to resolve import "react-router-dom" from "src/main.jsx". Does the file exist?
 [vite:css] @import must precede all other statements (besides @charset or empty @layer)
 26 |  
 27 |  /* Fonts */
@@ -14,3 +15,43 @@
    |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 29 |  
 30 |  .font-orbitron { font-family: 'Orbitron', system-ui, sans-serif; }
+7:01:31 PM [vite] Internal server error: Failed to resolve import "react-router-dom" from "src/main.jsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/workspace/src/main.jsx:3:45
+  2  |  import React from "react";
+  3  |  import ReactDOM from "react-dom/client";
+  4  |  import { BrowserRouter, Routes, Route } from "react-router-dom";
+     |                                                ^
+  5  |  import App from "./App";
+  6  |  import Test from "./Test";
+      at TransformPluginContext._formatError (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41)
+      at TransformPluginContext.error (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16)
+      at normalizeUrl (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7)
+      at async PluginContainer.transform (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18)
+      at async loadAndTransform (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27)
+      at async viteTransformMiddleware (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:62105:24)
+7:01:32 PM [vite] Pre-transform error: Failed to resolve import "react-router-dom" from "src/main.jsx". Does the file exist?
+7:01:47 PM [vite] Pre-transform error: Failed to resolve import "react-router-dom" from "src/main.jsx". Does the file exist?
+7:01:47 PM [vite] Internal server error: Failed to resolve import "react-router-dom" from "src/main.jsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/workspace/src/main.jsx:3:45
+  2  |  import React from "react";
+  3  |  import ReactDOM from "react-dom/client";
+  4  |  import { BrowserRouter, Routes, Route } from "react-router-dom";
+     |                                                ^
+  5  |  import App from "./App";
+  6  |  import Test from "./Test";
+      at TransformPluginContext._formatError (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49258:41)
+      at TransformPluginContext.error (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49253:16)
+      at normalizeUrl (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64306:23)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64438:39
+      at async Promise.all (index 3)
+      at async TransformPluginContext.transform (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:64365:7)
+      at async PluginContainer.transform (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:49099:18)
+      at async loadAndTransform (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51977:27)
+      at async viteTransformMiddleware (file:///home/workspace/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:62105:24)
